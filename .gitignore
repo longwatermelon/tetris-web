@@ -1,0 +1,4 @@
+*.o
+tetris
+.cache
+compile_commands.json
