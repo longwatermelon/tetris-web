@@ -2,13 +2,22 @@
 #include <time.h>
 #include <emscripten.h>
 
+struct Prog *p;
+
 void mainloop(void *arg)
 {
-    struct Prog *p = arg;
     prog_mainloop(p);
 
-    if (!p->running)
+    if (!p->running && !p->restart)
         emscripten_cancel_main_loop();
+
+    if (!p->running && p->restart)
+    {
+        SDL_Window *w = p->window;
+        SDL_Renderer *r = p->rend;
+        prog_free(p);
+        p = prog_alloc(w, r);
+    }
 }
 
 int main(int argc, char **argv)
@@ -19,19 +28,8 @@ int main(int argc, char **argv)
     SDL_Window *window = SDL_CreateWindow("3d Tetris", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 800, SDL_WINDOW_SHOWN);
     SDL_Renderer *rend = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-    while (true)
-    {
-        struct Prog *p = prog_alloc(window, rend);
-        emscripten_set_main_loop_arg(mainloop, p, -1, 1);
-
-        if (!p->restart)
-        {
-            prog_free(p);
-            break;
-        }
-
-        prog_free(p);
-    }
+    p = prog_alloc(window, rend);
+    emscripten_set_main_loop_arg(mainloop, p, -1, 1);
 
     SDL_DestroyRenderer(rend);
     SDL_DestroyWindow(window);
